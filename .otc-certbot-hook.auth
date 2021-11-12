@@ -1,0 +1,21 @@
+# Provide your credentials and DNS information.
+
+OTC_REGION=eu-de
+OTC_USER=foobar
+OTC_PASSWORD=secret
+OTC_DOMAIN=YourOTCDomain
+
+ROOT_ZONE=yourdomain.tld
+
+# OTC Token Authentication is used.
+# For detailed instructions on how to claim the stuff, try
+# . https://docs.otc.t-systems.com/apiug/index.html
+# . https://docs.otc.t-systems.com/dns/index.html
+#
+# Be aware that OTC Domain IS NOT your DNS domain.
+# Your public DNS domain on OTC is called ROOT_ZONE, here.
+# OTC seems to require that your user has DNS Administrator
+# privileges assigned.
+
+OTC_IAM=https://iam.${OTC_REGION}.otc.t-systems.com/v3
+OTC_DNS=https://dns.${OTC_REGION}.otc.t-systems.com/v2
