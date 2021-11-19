@@ -5,7 +5,8 @@ OTC_USER=foobar
 OTC_PASSWORD=secret
 OTC_DOMAIN=YourOTCDomain
 
-ROOT_ZONE=yourdomain.tld
+OTC_ROOT_ZONE=yourdomain.tld
+# OTC_DNS_DELAY=10
 
 # OTC Token Authentication is used.
 # For detailed instructions on how to claim the stuff, try

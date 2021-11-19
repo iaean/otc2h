@@ -27,7 +27,7 @@ if [ ! "$(type -P jq)" ]; then
     exit 4
 fi
 if [[ -z "$OTC_REGION" || -z "$OTC_USER" || -z "$OTC_PASSWORD" || \
-      -z "$OTC_DOMAIN" || -z "$ROOT_ZONE" || -z "$OTC_IAM" || -z "$OTC_DNS" ]]; then
+      -z "$OTC_DOMAIN" || -z "$OTC_ROOT_ZONE" || -z "$OTC_IAM" || -z "$OTC_DNS" ]]; then
   >&2 echo "Variable missing. Check your $OTCAUTH settings."
   exit 5
 fi
@@ -41,6 +41,23 @@ fi
 [ -n "$CERTBOT_AUTH_OUTPUT" ] \
 && echo "Deleting challenge ${CERTBOT_VALIDATION} ..." \
 || echo "Setting challenge ${CERTBOT_VALIDATION} ..."
+
+# Strip off any leading wildcard and prepend "_acme-challenge."
+domain="_acme-challenge.${CERTBOT_DOMAIN#\*.}"
+if [ "${domain}" = "${OTC_ROOT_ZONE}" ]; then
+  subname=""
+else
+  subname="${domain%.$OTC_ROOT_ZONE}"
+fi
+
+# TODO: make {OTC_ROOT_ZONE} an array {OTC_ROOT_ZONES}
+echo $domain | grep -e ${OTC_ROOT_ZONE}$ >/dev/null
+if [[ $? == 0 ]]; then
+  : # echo "${CERTBOT_DOMAIN} matches ${OTC_ROOT_ZONE}"
+else
+  >&2 echo "${CERTBOT_DOMAIN} mismatches ${OTC_ROOT_ZONE}. Check your $OTCAUTH settings."
+  exit 7
+fi
 
 # Request OTC access token
 ACCESS_TOKEN=$(
@@ -72,25 +89,17 @@ function release_token {
     ${OTC_IAM}/auth/tokens
 }
 
-# Querying {ROOT_ZONE}
+# Querying {OTC_ROOT_ZONE}
 ZONE_ID=$(curl -Ss -X GET -H "X-Auth-Token: ${ACCESS_TOKEN}" ${OTC_DNS}/zones | \
-  jq -r '.zones[] | select(.name == "'${ROOT_ZONE}.'").id')
+  jq -r '.zones[] | select(.name == "'${OTC_ROOT_ZONE}.'").id')
 if [ -z "${ZONE_ID}" ]; then
-    >&2 echo "Zone $ROOT_ZONE not found. Check your $OTCAUTH settings."
+    >&2 echo "Zone $OTC_ROOT_ZONE not found. Check your $OTCAUTH settings."
     release_token
     exit 11
 fi
 ### echo ${ZONE_ID}
 
-# Strip off any leading wildcard and prepend "_acme-challenge."
-domain="_acme-challenge.${CERTBOT_DOMAIN#\*.}"
-if [ "${domain}" = "${ROOT_ZONE}" ]; then
-  subname=""
-else
-  subname="${domain%.$ROOT_ZONE}"
-fi
-
-# Querying ACME validation token(s) in {ROOT_ZONE}
+# Querying ACME validation token(s) in {OTC_ROOT_ZONE}
 JSON=$(curl -Ss -X GET -H "X-Auth-Token: ${ACCESS_TOKEN}" \
   ${OTC_DNS}/zones/${ZONE_ID}/recordsets?type=TXT\&name=${domain}. | jq -c .)
 ### echo ${JSON}
@@ -160,8 +169,10 @@ fi
 
 release_token
 
+sleep=${OTC_DNS_DELAY:-10}
+
 [ -n "$CERTBOT_AUTH_OUTPUT" ] \
-|| (echo "Waiting 60s for changes be published..."; date; sleep 60)
+|| (echo "Waiting ${sleep}s for changes be published..."; date; sleep ${sleep})
 
 [ -n "$CERTBOT_AUTH_OUTPUT" ] \
 && echo -e '\e[32mChallenge deleted. Returning to certbot.\e[0m' \
