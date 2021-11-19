@@ -36,6 +36,7 @@ certbot --manual --text --preferred-challenges dns \
 
 - [ ] OTC AK/SK authentication support
 - [ ] DNS Zone nesting support
+- [ ] Multiple {OTC_ROOT_ZONES}
 
 Best way seems a portable binary that encapsulates the OTC DNS dealing.
 
